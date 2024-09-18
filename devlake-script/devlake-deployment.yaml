@@ -1,0 +1,100 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/instance: devlake
+    app.kubernetes.io/name: devlake
+    app.kubernetes.io/version: v0.21.0
+  name: devlake-lake
+  namespace: devlake
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: devlake
+      app.kubernetes.io/name: devlake
+      devlakeComponent: lake
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: devlake
+        app.kubernetes.io/name: devlake
+        devlakeComponent: lake
+    spec:
+      containers:
+      - env:
+        - name: PORT
+          value: "8080"
+        - name: API_REQUESTS_PER_HOUR
+          value: "10000"
+        - name: API_RETRY
+          value: "3"
+        - name: API_TIMEOUT
+          value: 120s
+        - name: IN_SECURE_SKIP_VERIFY
+          value: "false"
+        - name: LOGGING_DIR
+          value: /app/logs
+        - name: LOGGING_LEVEL
+          value: info
+        - name: PIPELINE_MAX_PARALLEL
+          value: "1"
+        - name: TZ
+          value: UTC
+        envFrom:
+        - secretRef:
+            name: devlake-mysql-auth
+        - secretRef:
+            name: devlake-encryption-secret
+        image: devlake.docker.scarf.sh/apache/devlake:v0.21.0
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 5
+          httpGet:
+            path: /ping
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 5
+        name: lake
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /ping
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 5
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      initContainers:
+      - command:
+        - sh
+        - -c
+        - |
+          until nc -z -w 2 devlake-mysql 3306 ; do
+            echo wait for database ready ...
+            sleep 2
+          done
+          echo database is ready
+        image: alpine:3.16
+        imagePullPolicy: IfNotPresent
+        name: waiting-database-ready
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30

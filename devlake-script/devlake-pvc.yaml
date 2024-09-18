@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app.kubernetes.io/instance: devlake
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/version: v0.21.0
+  name: devlake-grafana
+  namespace: devlake
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 4Gi
+  storageClassName: devlake-lake
+  volumeMode: Filesystem
+  volumeName: pv-grafana
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app.kubernetes.io/instance: devlake
+    app.kubernetes.io/name: devlake
+  name: devlake-mysql-data-devlake-mysql-0
+  namespace: devlake
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Gi
+  storageClassName: devlake
+  volumeMode: Filesystem
+  volumeName: pv-devlake-mysql
